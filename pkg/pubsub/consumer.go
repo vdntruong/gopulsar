@@ -7,46 +7,65 @@ import (
 )
 
 type Consumer struct {
-	c pulsar.Consumer
+	client   pulsar.Client
+	consumer pulsar.Consumer
+
+	name    string
+	topic   string
+	subName string
+	subType pulsar.SubscriptionType
 }
 
-type (
-	MessageHandler func(ctx context.Context, msg pulsar.Message, ackFunc func() error) error
-)
-
-func NewConsumer(client pulsar.Client, topic string, name string) (*Consumer, func(), error) {
-	c, err := client.Subscribe(pulsar.ConsumerOptions{
+func NewConsumer(
+	client pulsar.Client,
+	name string,
+	topic string,
+	subName string,
+	subType pulsar.SubscriptionType,
+) (*Consumer, error) {
+	consumer, err := client.Subscribe(pulsar.ConsumerOptions{
+		Name:             name,
 		Topic:            topic,
-		SubscriptionName: name,
-		Type:             pulsar.Shared,
+		SubscriptionName: subName,
+		Type:             subType,
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to subscribe to topic %s: %w", topic, err)
+		return nil, err
 	}
 
-	consumer := &Consumer{c: c}
-	closeFunc := func() {
-		c.Close()
-	}
-
-	return consumer, closeFunc, nil
+	return &Consumer{
+		client:   client,
+		name:     name,
+		topic:    topic,
+		subName:  subName,
+		subType:  subType,
+		consumer: consumer,
+	}, nil
 }
 
-func (c *Consumer) Consume(ctx context.Context) ([]byte, error) {
-	msg, err := c.c.Receive(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to receive message: %w", err)
-	}
-
-	if err := c.c.Ack(msg); err != nil {
-		return nil, fmt.Errorf("failed to ack message: %w", err)
-	}
-	return msg.Payload(), nil
-}
-
-func (c *Consumer) Unsubscribe() error {
-	if err := c.c.Unsubscribe(); err != nil {
+func (c *Consumer) Close() error {
+	if err := c.consumer.Unsubscribe(); err != nil {
 		return fmt.Errorf("failed to unsubscribe: %w", err)
 	}
+
+	c.consumer.Close()
 	return nil
+}
+
+func (c *Consumer) PullMessages(ctx context.Context) error {
+	for {
+		msg, err := c.consumer.Receive(ctx)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf(
+			"Received message msgId: %#v -- content: '%s'\n",
+			msg.ID(), string(msg.Payload()),
+		)
+
+		if err := c.consumer.Ack(msg); err != nil {
+			return err
+		}
+	}
 }
