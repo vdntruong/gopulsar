@@ -39,12 +39,14 @@ var publisherCmd = &cobra.Command{
 		}
 		defer closer()
 
-		messageID, err := producer.Send(cmd.Context(), args[0])
-		if err != nil {
-			log.Fatalf("Could not send message: %v", err)
+		for i := 0; i < len(args); i++ {
+			messageID, err := producer.Send(cmd.Context(), args[i])
+			if err != nil {
+				log.Printf("ERROR: Could not send the message, err: %v, payload: %s\n", err, args[i])
+				return
+			}
+			log.Println("Published message:", messageID, "payload:", args[i])
 		}
-
-		log.Println("Published message:", messageID)
 	},
 }
 

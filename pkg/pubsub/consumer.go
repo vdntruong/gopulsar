@@ -46,7 +46,12 @@ func NewConsumer(
 
 func (c *Consumer) Close() error {
 	if err := c.consumer.Unsubscribe(); err != nil {
-		return fmt.Errorf("failed to unsubscribe: %w", err)
+		// Unsubscribe
+		// This operation will fail when performed on a shared subscription
+		// where more than one consumer are currently connected.
+		if c.subType != pulsar.Shared {
+			return fmt.Errorf("failed to unsubscribe: %w", err)
+		}
 	}
 	c.consumer.Close()
 	return nil
