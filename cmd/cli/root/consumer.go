@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sync"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
 
 	"github.com/apache/pulsar-client-go/pulsar"
 	"github.com/spf13/cobra"
@@ -71,7 +74,10 @@ func startConsumer(ctx context.Context, name, topic string, subName, subType str
 	if err != nil {
 		return fmt.Errorf("could not instantiate Pulsar (%s) client: %w", PulsarURL, err)
 	}
-	defer client.Close()
+	defer func() {
+		client.Close()
+		log.Println("Closed pulsar client")
+	}()
 
 	consumer, err := pubsub.NewConsumer(client, name, topic, subName, subscriptionType)
 	if err != nil {
@@ -81,18 +87,30 @@ func startConsumer(ctx context.Context, name, topic string, subName, subType str
 		if err := consumer.Close(); err != nil {
 			log.Fatal(err)
 		}
+		log.Println("Closed consumer")
 	}()
 
-	wg := sync.WaitGroup{}
-	wg.Add(1)
+	osSignals := make(chan os.Signal, 1)
+	signal.Notify(osSignals, syscall.SIGINT, syscall.SIGTERM)
 
-	go func(ctx context.Context, wg *sync.WaitGroup) {
-		defer wg.Done()
-		if err := consumer.PullMessages(ctx); err != nil {
-			log.Fatal(err)
+	go func() {
+		<-osSignals
+		log.Println("Received interrupt signal. Shutting down...")
+		if err := consumer.Close(); err != nil {
+			log.Println("Failed to clear consumer: ", err)
 		}
-	}(ctx, &wg)
+		client.Close()
+		os.Exit(0)
+	}()
 
-	wg.Wait()
+	log.Println("Pulling messages")
+	if err := consumer.PullMessages(ctx); err != nil {
+		if strings.Contains(err.Error(), "ConsumerClosed") {
+			log.Println("Consumer Closed")
+		} else {
+			log.Println("Failed to pull messages: ", err)
+		}
+	}
+
 	return nil
 }

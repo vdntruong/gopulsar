@@ -3,6 +3,7 @@ package pubsub
 import (
 	"context"
 	"fmt"
+
 	"github.com/apache/pulsar-client-go/pulsar"
 )
 
@@ -47,7 +48,6 @@ func (c *Consumer) Close() error {
 	if err := c.consumer.Unsubscribe(); err != nil {
 		return fmt.Errorf("failed to unsubscribe: %w", err)
 	}
-
 	c.consumer.Close()
 	return nil
 }
