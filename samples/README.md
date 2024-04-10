@@ -37,6 +37,8 @@ Allows multiple consumers attach to the same subscription. A master consumer is 
 
 The broker picks consumers in the order they subscribe to topics
 
+#### If there is one non-partitioned topic (consumer subscribes to only 1 topic)
+
 Let's start 2 consumers
 
 ```bash
@@ -53,7 +55,7 @@ Publish some messages, then disconnect the first consumer to switch delivering t
 go run ../cmd/cli/cli.go publish -t=topic-payment TheFirstMessage TheSecondOne TheThirdOne AndTheLast
 ```
 
-#### If there are multiple non-partitioned topics
+#### If there are multiple non-partitioned topics (consumer subscribes to more than 1 topic)
 
 A consumer is selected based on consumer name hash and topic name hash, eventually the 
 assignment cannot be determined
@@ -66,7 +68,7 @@ go run ../cmd/cli/cli.go consumer -n=ConsumerFN1 -t=topic-01 -t=topic-02 -t=topi
 go run ../cmd/cli/cli.go consumer -n=ConsumerFN2 -t=topic-01 -t=topic-02 -t=topic-03 -t=topic-04 --subName=checking --subType=failover
 ```
 
-> [!TIP]
+> [!NOTE]
 > 
 > Consumers can subscribe to multiple topics with the same subscription name
 
