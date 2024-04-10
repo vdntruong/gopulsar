@@ -69,6 +69,7 @@ func (c *Consumer) PullMessages(ctx context.Context) error {
 			msg.ID(), string(msg.Payload()),
 		)
 
+		c.consumer.Nack(msg)
 		if err := c.consumer.Ack(msg); err != nil {
 			return err
 		}
