@@ -28,16 +28,79 @@ go run ../cmd/cli/cli.go publish -t=topic-logger Only1ConsumerReceiveThisMsg
 
 Allows multiple consumers attach to the same subscription. A master consumer is picked and receives messages. 
 
-> **WARNING**
+> [!IMPORTANT]
 >
 > In some cases, when the active consumer is newly switched over, 
 > it may start receiving new messages. This could result in the duplication of messages or them being received out of order.
+
+### Failover non-partitioned topic
+
+The broker picks consumers in the order they subscribe to topics
+
+Let's start 2 consumers
+
+```bash
+go run ../cmd/cli/cli.go consumer -n=ConsumerFN1 -t=topic-payment --subName=reconciliation --subType=failover
+```
+
+```bash
+go run ../cmd/cli/cli.go consumer -n=ConsumerFN2 -t=topic-payment --subName=reconciliation --subType=failover
+```
+
+Publish some messages, then disconnect the first consumer to switch delivering to the second one
+
+```bash
+go run ../cmd/cli/cli.go publish -t=topic-payment TheFirstMessage TheSecondOne TheThirdOne AndTheLast
+```
+
+#### If there are multiple non-partitioned topics
+
+A consumer is selected based on consumer name hash and topic name hash, eventually the 
+assignment cannot be determined
+
+```bash
+go run ../cmd/cli/cli.go consumer -n=ConsumerFN1 -t=topic-01 -t=topic-02 -t=topic-03 -t=topic-04 --subName=checking --subType=failover
+```
+
+```bash
+go run ../cmd/cli/cli.go consumer -n=ConsumerFN2 -t=topic-01 -t=topic-02 -t=topic-03 -t=topic-04 --subName=checking --subType=failover
+```
+
+> [!TIP]
+> 
+> Consumers can subscribe to multiple topics with the same subscription name
+
+Publish some messages, then disconnect first consumer to switch delivering to the second one
+
+```bash
+go run ../cmd/cli/cli.go publish -t=topic-01 msg01Topic01 msg02Topic01 msg03Topic01
+```
+
+```bash
+go run ../cmd/cli/cli.go publish -t=topic-02 msg01Topic02 msg02Topic02 msg03Topic02
+```
+
+```bash
+go run ../cmd/cli/cli.go publish -t=topic-03 msg01Topic03 msg02Topic03 msg03Topic03
+```
+
+```bash
+go run ../cmd/cli/cli.go publish -t=topic-04 msg01Topic04 msg02Topic04 msg03Topic04
+```
+
+> [!IMPORTANT]
+>
+> It does not matter which consumer starts first, the assignment will always follow the name hash.
+> The assignment may change if you alter the consumer names.
+
+
+### Failover partitioned topic
 
 ## Shared
 
 Messages are delivered in a round-robin distribution across consumers ~ worker pool
 
-> **WARNING**
+> [!IMPORTANT]
 > 
 > Shared subscriptions **do not** guarantee message ordering or support cumulative acknowledgment.
 > 
@@ -65,7 +128,7 @@ Let's publish some messages
 go run ../cmd/cli/cli.go publish -t=topic-payment TheFirstMessage TheSecondOne TheThirdOne AndTheLast
 ```
 
-> **WARNING**
+> [!WARNING]
 > 
 > In Go client, the operation Consumer.Unsubscribe() 
 > 

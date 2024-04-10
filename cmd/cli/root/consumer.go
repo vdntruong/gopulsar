@@ -16,8 +16,8 @@ import (
 )
 
 var (
-	name  = "con-01"
-	topic = "default"
+	name   = "con-01"
+	topics = []string{"default"}
 
 	subName = "sub-01"
 	subType = "exclusive"
@@ -31,7 +31,7 @@ var consumerCmd = &cobra.Command{
 		if len(name) == 0 {
 			log.Println("")
 		}
-		if err := startConsumer(cmd.Context(), name, topic, subName, subType); err != nil {
+		if err := startConsumer(cmd.Context(), name, topics, subName, subType); err != nil {
 			log.Fatal(err)
 		}
 	},
@@ -40,10 +40,10 @@ var consumerCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(consumerCmd)
 
-	consumerCmd.Flags().StringVarP(&name, "name", "n", "", "consumer name")
-	consumerCmd.Flags().StringVarP(&topic, "topic", "t", "", "topic")
-	consumerCmd.Flags().StringVarP(&subName, "subName", "", "", "subscription name")
-	consumerCmd.Flags().StringVarP(&subType, "subType", "", "", "subscription type [exclusive, shared, failover, key_shared]")
+	consumerCmd.Flags().StringVarP(&name, "name", "n", name, "consumer name")
+	consumerCmd.Flags().StringArrayVarP(&topics, "topic", "t", topics, "topic")
+	consumerCmd.Flags().StringVarP(&subName, "subName", "", subName, "subscription name")
+	consumerCmd.Flags().StringVarP(&subType, "subType", "", subType, "subscription type [exclusive, shared, failover, key_shared]")
 
 	_ = consumerCmd.MarkFlagRequired("name")
 	_ = consumerCmd.MarkFlagRequired("topic")
@@ -62,7 +62,13 @@ var (
 	}
 )
 
-func startConsumer(ctx context.Context, name, topic string, subName, subType string) error {
+func startConsumer(
+	ctx context.Context,
+	name string,
+	topics []string,
+	subName string,
+	subType string,
+) error {
 	subscriptionType, ok := SubscriptionTypeMapper[subType]
 	if !ok {
 		return fmt.Errorf("subType have to in [exclusive, shared, failover, key_shared]")
@@ -79,7 +85,7 @@ func startConsumer(ctx context.Context, name, topic string, subName, subType str
 		log.Println("Closed pulsar client")
 	}()
 
-	consumer, err := pubsub.NewConsumer(client, name, topic, subName, subscriptionType)
+	consumer, err := pubsub.NewConsumer(client, name, topics, subName, subscriptionType)
 	if err != nil {
 		return fmt.Errorf("failed to create consumer: %w", err)
 	}
@@ -90,6 +96,7 @@ func startConsumer(ctx context.Context, name, topic string, subName, subType str
 		log.Println("Closed consumer")
 	}()
 
+	log.Println("Registered consumer on topics", strings.Join(topics, ", "))
 	osSignals := make(chan os.Signal, 1)
 	signal.Notify(osSignals, syscall.SIGINT, syscall.SIGTERM)
 

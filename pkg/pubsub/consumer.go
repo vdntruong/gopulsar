@@ -12,7 +12,7 @@ type Consumer struct {
 	consumer pulsar.Consumer
 
 	name    string
-	topic   string
+	topic   []string
 	subName string
 	subType pulsar.SubscriptionType
 }
@@ -20,13 +20,13 @@ type Consumer struct {
 func NewConsumer(
 	client pulsar.Client,
 	name string,
-	topic string,
+	topic []string,
 	subName string,
 	subType pulsar.SubscriptionType,
 ) (*Consumer, error) {
 	consumer, err := client.Subscribe(pulsar.ConsumerOptions{
 		Name:             name,
-		Topic:            topic,
+		Topics:           topic,
 		SubscriptionName: subName,
 		Type:             subType,
 	})
