@@ -13,7 +13,7 @@ go run ../cmd/cli/cli.go consumer -n=ConsumerE1 -t=topic-logger --subName=logcol
 go run ../cmd/cli/cli.go consumer -n=ConsumerE2 -t=topic-logger --subName=logcollector --subType=exclusive
 ```
 
-> **ERROR**
+> [!CAUTION]
 >
 > We'll get an ERROR when trying to subscribe another consumer to the Exclusive subscription type
 >
